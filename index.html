@@ -1597,6 +1597,7 @@
         }
         return arr;
       }
+
       // Gán lại nhãn A/B/C/D + id/for
       function relabelOptions(opts) {
         const letters = ["A", "B", "C", "D"];
@@ -1612,18 +1613,43 @@
           if (tag) tag.textContent = letters[idx];
         });
       }
-      function randomizeQuestion(qEl) {
+
+      // Trộn đáp án của 1 câu
+      function randomizeQuestionOptions(qEl) {
         const parent = qEl.querySelector(".options");
         if (!parent) return;
         const opts = Array.from(parent.querySelectorAll(".opt"));
         shuffle(opts).forEach((opt) => parent.appendChild(opt));
         relabelOptions(Array.from(parent.children));
       }
+
+      // TRỘN THỨ TỰ CÁC CÂU HỎI (.q.card)
+      function randomizeSections() {
+        const quiz = document.querySelector(".quiz");
+        if (!quiz) return;
+        const items = Array.from(quiz.querySelectorAll(".q"));
+        shuffle(items).forEach((el) => quiz.appendChild(el));
+      }
+
+      // Trộn toàn bộ: reset -> trộn câu -> trộn đáp án từng câu -> cập nhật đếm
       function randomizeAll() {
         const form = document.getElementById("quizForm");
         if (form) form.reset();
-        document.querySelectorAll(".quiz .q").forEach(randomizeQuestion);
+
+        // 1) Trộn thứ tự câu hỏi
+        randomizeSections();
+
+        // 2) Trộn đáp án từng câu
+        document.querySelectorAll(".quiz .q").forEach(randomizeQuestionOptions);
+
+        // 3) Cập nhật bộ đếm + đưa về đầu trang cho tiện làm lại
+        requestAnimationFrame(() => {
+          updateCounters();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
       }
+
+      // Nút bấm
       document
         .getElementById("btn-random")
         ?.addEventListener("click", randomizeAll);
@@ -1633,8 +1659,6 @@
           document.getElementById("quizForm")?.reset()
         );
 
-      // Muốn random ngay khi mở trang thì bật:
-      // randomizeAll();
       // --- ĐẾM ĐÚNG/SAI BẰNG JS ---
       function updateCounters() {
         let correct = 0,
@@ -1645,7 +1669,6 @@
           if (chosen.hasAttribute("data-correct")) correct++;
           else wrong++;
         });
-        // Gán thẳng text vào header
         document
           .querySelectorAll(".oknum")
           .forEach((el) => (el.textContent = correct));
@@ -1658,19 +1681,14 @@
       const formEl = document.querySelector("form");
       if (formEl) {
         formEl.addEventListener("change", updateCounters);
-        formEl.addEventListener("reset", () => setTimeout(updateCounters, 0)); // chờ reset xong
+        formEl.addEventListener("reset", () => setTimeout(updateCounters, 0));
       }
 
       // Gọi 1 lần khi tải trang
       updateCounters();
 
-      // --- GHIM LẠI: gọi updateCounters sau khi random ---
-      const oldRandomizeAll = randomizeAll; // giữ hàm bạn đã có
-      window.randomizeAll = function () {
-        oldRandomizeAll();
-        // Chờ DOM reflow rồi cập nhật số
-        requestAnimationFrame(updateCounters);
-      };
+      // Nếu muốn tự random khi mở trang thì bật dòng sau:
+      // randomizeAll();
     </script>
   </body>
 </html>
