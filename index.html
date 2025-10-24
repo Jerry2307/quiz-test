@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aptis Reading – Full Part 2 & Part 4</title>
+    <style>
+      :root {
+        --ok-bg: #e6ffed;
+        --ok-border: #16a34a;
+        --ok-text: #14532d;
+        --bad-bg: #ffe6e6;
+        --bad-border: #dc2626;
+        --bad-text: #7f1d1d;
+        --ring: #3b82f6;
+        --muted: #9ca3af;
+        --ink: #e5e7eb;
+        --line: #1f2937;
+        --card1: #0b1020;
+        --card2: #111827;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #0a0f1a;
+        color: var(--ink);
+        font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Arial,
+          sans-serif;
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px;
+        counter-reset: correct 0 wrong 0;
+      } /* <-- counter ở wrapper */
+
+      .card {
+        background: linear-gradient(180deg, var(--card1), var(--card2));
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08),
+          0 10px 30px rgba(0, 0, 0, 0.35);
+      }
+      .toolbar {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+      .toolbar.sticky {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        backdrop-filter: blur(6px);
+        background: linear-gradient(
+          180deg,
+          rgba(11, 16, 32, 0.9),
+          rgba(17, 24, 39, 0.9)
+        );
+        border-color: #273244;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #0f172a;
+        border: 1px solid var(--line);
+        cursor: pointer;
+      }
+      .results {
+        margin-left: auto;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        font-weight: 700;
+      }
+      .pill {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #0f172a;
+      }
+      .pill.ok {
+        color: #34d399;
+      }
+      .pill.bad {
+        color: #f87171;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .quiz {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .q {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .head {
+        font-weight: 800;
+      }
+      .desc {
+        color: #cbd5e1;
+        font-size: 14px;
+      }
+      .stmts {
+        margin: 6px 0 4px 0;
+        padding-left: 22px;
+        color: #e5e7eb;
+      }
+      .stmts li {
+        margin: 2px 0;
+      }
+      .options {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 2px;
+      }
+      .opt input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .opt label {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        border: 1px solid #374151;
+        border-radius: 12px;
+        background: #0b1324;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s, transform 0.02s;
+      }
+      .opt label:hover {
+        border-color: #334155;
+      }
+      .opt label:active {
+        transform: scale(0.997);
+      }
+      .tag {
+        min-width: 32px;
+        text-align: center;
+        font-weight: 800;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 2px 6px;
+        background: #0c1528;
+      }
+      .text {
+        flex: 1;
+      }
+
+      /* Đếm đúng/sai bằng :has() */
+      .q:has(input[data-correct]:checked) {
+        counter-increment: correct;
+      }
+      .q:has(input[type="radio"]:checked):not(
+          :has(input[data-correct]:checked)
+        ) {
+        counter-increment: wrong;
+      }
+      .oknum::after {
+        content: counter(correct);
+      }
+      .badnum::after {
+        content: counter(wrong);
+      }
+
+      /* Màu đúng/sai */
+      .opt input[data-correct]:checked + label {
+        background: var(--ok-bg);
+        color: var(--ok-text);
+        border-color: var(--ok-border);
+      }
+      .opt input[data-correct]:checked + label .tag {
+        border-color: var(--ok-border);
+        color: var(--ok-text);
+        background: #dcfce7;
+      }
+      .opt input:not([data-correct]):checked + label {
+        background: var(--bad-bg);
+        color: var(--bad-text);
+        border-color: var(--bad-border);
+      }
+      .opt input:not([data-correct]):checked + label .tag {
+        border-color: var(--bad-border);
+        color: var(--bad-text);
+        background: #fee2e2;
+      }
+
+      /* Gợi ý đáp án đúng khi chọn sai */
+      .q:has(input[type="radio"]:checked):not(:has(input[data-correct]:checked))
+        .opt.correct
+        label {
+        outline: 2px dashed var(--ok-border);
+        outline-offset: 3px;
+      }
+
+      /* Nút */
+      .btn {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: #111827;
+        color: #e5e7eb;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .btn:hover {
+        border-color: #334155;
+      }
+      /* Tắt hiển thị bằng ::after để dùng số do JS set trực tiếp */
+      .oknum::after,
+      .badnum::after {
+        content: "";
+      }
+      /* ---- CHIP BUTTONS ---- */
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #0f172a;
+        color: #e5e7eb;
+        font-weight: 700;
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.06s ease, border-color 0.2s ease,
+          box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+      }
+      .chip:hover {
+        border-color: #42536b;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) inset;
+      }
+      .chip:active {
+        transform: translateY(1px) scale(0.995);
+      }
+      .chip:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+        border-color: rgba(59, 130, 246, 0.85);
+      }
+
+      /* Biến thể màu */
+      .chip.primary {
+        background: linear-gradient(180deg, #0e1a34, #0a1430);
+        border-color: #264a8a;
+      }
+      .chip.primary:hover {
+        background: linear-gradient(180deg, #112143, #0b1636);
+        border-color: #3b82f6;
+      }
+
+      .chip.danger {
+        background: linear-gradient(180deg, #2a0f14, #240b0b);
+        border-color: #6b1c1c;
+        color: #fca5a5;
+      }
+      .chip.danger:hover {
+        border-color: #ef4444;
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18) inset;
+      }
+
+      /* Nâng cấp toolbar sticky khi cuộn */
+      .toolbar.sticky {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        backdrop-filter: blur(8px);
+        background: radial-gradient(
+            120% 120% at 10% -20%,
+            rgba(59, 130, 246, 0.1),
+            transparent 40%
+          ),
+          linear-gradient(
+            180deg,
+            rgba(11, 16, 32, 0.92),
+            rgba(17, 24, 39, 0.92)
+          );
+        border-color: #273244;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      }
+
+      /* Pills sắc nét hơn */
+      .pill {
+        background: rgba(15, 23, 42, 0.9);
+        border-color: #2b3547;
+        letter-spacing: 0.2px;
+      }
+
+      /* Mobile: thu gọn nút */
+      @media (max-width: 720px) {
+        .chip {
+          padding: 8px 12px;
+        }
+        .results {
+          width: 100%;
+          justify-content: space-between;
+        }
+      }
+
+      /* Tôn trọng người dùng giảm chuyển động */
+      @media (prefers-reduced-motion: reduce) {
+        .chip {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <!-- HEADER STICKY -->
+      <div class="toolbar card sticky">
+        <div class="shufflebar">
+          <span class="muted">Đảo thứ tự:</span>
+          <button type="button" id="btn-random" class="chip primary">
+            🎲 Random đáp án
+          </button>
+          <button type="button" id="btn-reset" class="chip danger">
+            ↺ Reset
+          </button>
+        </div>
+        <div class="results">
+          <span class="pill ok">Đúng: <span class="oknum"></span></span>
+          <span class="pill bad">Sai: <span class="badnum"></span></span>
+        </div>
+      </div>
+
+      <form id="quizForm">
+        <div class="quiz">
+          <!-- ====== PART 2 & PART 4 (đã bỏ <strong> ở đáp án đúng) ====== -->
+
+          <!-- 1 -->
+          <section class="q card">
+            <div class="head">Part 2: University open day</div>
+            <div class="desc">
+              Arrange the sentences in the correct order to describe the process
+              of the university open day.
+            </div>
+            <ol class="stmts">
+              <li>
+                Using this information, we’ll prepare an identification card for
+                you to collect upon arrival.
+              </li>
+              <li>
+                Every visitor will have the chance to join a Q&amp;A session
+                with current students.
+              </li>
+              <li>
+                Before the open day, please contact us by phone or email so we
+                can record your personal details.
+              </li>
+              <li>
+                After the presentations, you’ll be able to explore different
+                departments across the campus.
+              </li>
+              <li>
+                You’ll need to show this card to enter the introductory talk and
+                morning lectures.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q1" id="q1a" /><label for="q1a"
+                  ><span class="tag">A</span
+                  ><span class="text">34125</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q1" id="q1b" /><label for="q1b"
+                  ><span class="tag">B</span
+                  ><span class="text">35142</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q1" id="q1c" /><label for="q1c"
+                  ><span class="tag">C</span
+                  ><span class="text">34512</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="D">
+                <input type="radio" name="q1" id="q1d" data-correct /><label
+                  for="q1d"
+                  ><span class="tag">D</span
+                  ><span class="text">31254</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 2 -->
+          <section class="q card">
+            <div class="head">Part 2: The history of transportation</div>
+            <div class="desc">
+              Choose the correct order of sentences to describe how
+              transportation became more accessible over time.
+            </div>
+            <ol class="stmts">
+              <li>
+                Eventually, buses and trains were introduced as affordable
+                alternatives.
+              </li>
+              <li>
+                Today, buses and trains are among the most common transportation
+                options.
+              </li>
+              <li>
+                In the past, transportation was primarily accessible to the
+                wealthy.
+              </li>
+              <li>These made traveling more accessible to everyone.</li>
+              <li>
+                Later, air travel became popular among business professionals.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q2" id="q2a" /><label for="q2a"
+                  ><span class="tag">A</span
+                  ><span class="text">35142</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q2" id="q2b" /><label for="q2b"
+                  ><span class="tag">B</span
+                  ><span class="text">31425</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="C">
+                <input type="radio" name="q2" id="q2c" data-correct /><label
+                  for="q2c"
+                  ><span class="tag">C</span
+                  ><span class="text">31542</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q2" id="q2d" /><label for="q2d"
+                  ><span class="tag">D</span
+                  ><span class="text">34521</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 3 -->
+          <section class="q card">
+            <div class="head">Part 2: Social media</div>
+            <div class="desc">
+              Rearrange the sentences below to show the evolution of social
+              media.
+            </div>
+            <ol class="stmts">
+              <li>
+                Over time, social media platforms have greatly evolved in both
+                design and functionality.
+              </li>
+              <li>
+                Many influencers now earn income primarily through brand
+                sponsorships and online ads.
+              </li>
+              <li>
+                Today’s platforms use complex algorithms to personalize and
+                shape each user’s feed.
+              </li>
+              <li>
+                Early platforms offered only basic features like text posts and
+                simple images.
+              </li>
+              <li>
+                In the past, slow internet speeds made streaming or uploading
+                videos difficult.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q3" id="q3a" /><label for="q3a"
+                  ><span class="tag">A</span
+                  ><span class="text">45132</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="B">
+                <input type="radio" name="q3" id="q3b" data-correct /><label
+                  for="q3b"
+                  ><span class="tag">B</span
+                  ><span class="text">54132</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q3" id="q3c" /><label for="q3c"
+                  ><span class="tag">C</span
+                  ><span class="text">41523</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q3" id="q3d" /><label for="q3d"
+                  ><span class="tag">D</span
+                  ><span class="text">51423</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 4 -->
+          <section class="q card">
+            <div class="head">Part 2: Neighborhood Festival</div>
+            <div class="desc">Arrange the sentences in the correct order.</div>
+            <ol class="stmts">
+              <li>
+                Around 100 people attended, with Ms. Carter leading the
+                organizing team.
+              </li>
+              <li>
+                Activities included dance workshops, art displays, and a pet
+                parade.
+              </li>
+              <li>
+                After the performances, awards were given for the best food
+                stall.
+              </li>
+              <li>
+                Families stayed late, enjoying food and drinks under colorful
+                lights.
+              </li>
+              <li>
+                The festival was held on Friday evening, featuring live music
+                performances.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q4" id="q4a" /><label for="q4a"
+                  ><span class="tag">A</span
+                  ><span class="text">25134</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q4" id="q4b" /><label for="q4b"
+                  ><span class="tag">B</span
+                  ><span class="text">21534</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="C">
+                <input type="radio" name="q4" id="q4c" data-correct /><label
+                  for="q4c"
+                  ><span class="tag">C</span
+                  ><span class="text">51234</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q4" id="q4d" /><label for="q4d"
+                  ><span class="tag">D</span
+                  ><span class="text">12534</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 5 -->
+          <section class="q card">
+            <div class="head">Part 2: Music show at the park</div>
+            <div class="desc">
+              Choose the correct order of events at the music show.
+            </div>
+            <ol class="stmts">
+              <li>
+                The event was fully planned, financed, and supported by local
+                authorities.
+              </li>
+              <li>
+                Many attendees arrived early and browsed local shops before the
+                event began.
+              </li>
+              <li>
+                As a result, entry was free, and around five thousand people
+                attended.
+              </li>
+              <li>
+                The two-hour performance thrilled the audience, leaving everyone
+                in high spirits.
+              </li>
+              <li>
+                Despite the busy day, workers finished ahead of schedule and
+                watched the famous singer perform.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q5" id="q5a" /><label for="q5a"
+                  ><span class="tag">A</span
+                  ><span class="text">13542</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q5" id="q5b" /><label for="q5b"
+                  ><span class="tag">B</span
+                  ><span class="text">21345</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="C">
+                <input type="radio" name="q5" id="q5c" data-correct /><label
+                  for="q5c"
+                  ><span class="tag">C</span
+                  ><span class="text">12354</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q5" id="q5d" /><label for="q5d"
+                  ><span class="tag">D</span
+                  ><span class="text">15324</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 6 -->
+          <section class="q card">
+            <div class="head">Part 2: Workplace evolution</div>
+            <div class="desc">Put the sentences in the correct order.</div>
+            <ol class="stmts">
+              <li>
+                Today, businesses are exploring shorter workweeks to boost
+                productivity.
+              </li>
+              <li>
+                Previously, employees were confined to rigid nine-to-five work
+                hours.
+              </li>
+              <li>
+                Managers now utilize software to monitor project progress
+                remotely.
+              </li>
+              <li>
+                Flexible work models are becoming more common in modern
+                workplaces.
+              </li>
+              <li>
+                Technological restrictions once made remote work a challenge.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q6" id="q6a" /><label for="q6a"
+                  ><span class="tag">A</span
+                  ><span class="text">24513</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q6" id="q6b" /><label for="q6b"
+                  ><span class="tag">B</span
+                  ><span class="text">25413</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="C">
+                <input type="radio" name="q6" id="q6c" data-correct /><label
+                  for="q6c"
+                  ><span class="tag">C</span
+                  ><span class="text">25314</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q6" id="q6d" /><label for="q6d"
+                  ><span class="tag">D</span
+                  ><span class="text">45213</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 7 -->
+          <section class="q card">
+            <div class="head">Part 2: The new coffee</div>
+            <div class="desc">
+              Rearrange the sentences in the correct order.
+            </div>
+            <ol class="stmts">
+              <li>
+                The sandwich was both delicious and beautifully presented.
+              </li>
+              <li>
+                I arrived at the shop early in the morning, but it was crowded
+                with people.
+              </li>
+              <li>
+                The menu was not as good as expected and quite pricey, so I
+                decided to order a sandwich.
+              </li>
+              <li>
+                I might return to try different types of drinks next time.
+              </li>
+              <li>
+                A waiter assisted me in finding a table and handed me the menu.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q7" id="q7a" /><label for="q7a"
+                  ><span class="tag">A</span
+                  ><span class="text">52314</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="B">
+                <input type="radio" name="q7" id="q7b" data-correct /><label
+                  for="q7b"
+                  ><span class="tag">B</span
+                  ><span class="text">25314</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q7" id="q7c" /><label for="q7c"
+                  ><span class="tag">C</span
+                  ><span class="text">23514</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q7" id="q7d" /><label for="q7d"
+                  ><span class="tag">D</span
+                  ><span class="text">25134</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 8 -->
+          <section class="q card">
+            <div class="head">Part 2: The startup showcase</div>
+            <div class="desc">Arrange the sentences in correct order.</div>
+            <ol class="stmts">
+              <li>
+                The event featured live app demos, coding sprints, and investor
+                Q&amp;A sessions.
+              </li>
+              <li>
+                Over 55 entrepreneurs participated, with Ms. Vo pitching a
+                health-tech app.
+              </li>
+              <li>
+                Participants networked over smoothies while brainstorming future
+                partnerships.
+              </li>
+              <li>
+                Following the presentations, awards were given for the most
+                impactful innovation.
+              </li>
+              <li>
+                The startup showcase took place on Saturday, highlighting
+                innovative mobile apps.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt correct" data-choice="A">
+                <input type="radio" name="q8" id="q8a" data-correct /><label
+                  for="q8a"
+                  ><span class="tag">A</span
+                  ><span class="text">52143</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q8" id="q8b" /><label for="q8b"
+                  ><span class="tag">B</span
+                  ><span class="text">51243</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q8" id="q8c" /><label for="q8c"
+                  ><span class="tag">C</span
+                  ><span class="text">51423</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q8" id="q8d" /><label for="q8d"
+                  ><span class="tag">D</span
+                  ><span class="text">52413</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 9 -->
+          <section class="q card">
+            <div class="head">Part 2: Tech innovation expo</div>
+            <div class="desc">Put the sentences in order.</div>
+            <ol class="stmts">
+              <li>
+                More than 75 participants attended, with Ms. Tran presenting a
+                smart home device.
+              </li>
+              <li>
+                Attendees had the opportunity to network over coffee and explore
+                interactive displays.
+              </li>
+              <li>
+                The tech expo took place on Sunday morning, showcasing the
+                latest innovations.
+              </li>
+              <li>
+                After the presentations, awards were given for the most
+                innovative prototype.
+              </li>
+              <li>
+                The event included 3D printing demos, AI workshops, and virtual
+                reality experiences.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q9" id="q9a" /><label for="q9a"
+                  ><span class="tag">A</span
+                  ><span class="text">35142</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="B">
+                <input type="radio" name="q9" id="q9b" data-correct /><label
+                  for="q9b"
+                  ><span class="tag">B</span
+                  ><span class="text">31452</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q9" id="q9c" /><label for="q9c"
+                  ><span class="tag">C</span
+                  ><span class="text">31542</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q9" id="q9d" /><label for="q9d"
+                  ><span class="tag">D</span
+                  ><span class="text">35412</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 10 -->
+          <section class="q card">
+            <div class="head">Part 2: Company wellness day</div>
+            <div class="desc">Arrange the sentences correctly.</div>
+            <ol class="stmts">
+              <li>
+                After the workshops, awards were given for the most creative
+                wellness ideas.
+              </li>
+              <li>
+                Activities included team yoga, time management seminars, and a
+                group walk.
+              </li>
+              <li>
+                More than 50 employees participated, with Mr. Khan leading a
+                workshop on stress relief.
+              </li>
+              <li>
+                Employees enjoyed healthy snacks and exchanged tips for managing
+                stress.
+              </li>
+              <li>
+                This month, the wellness day took place on Friday, focusing on
+                work-life balance.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt correct" data-choice="A">
+                <input type="radio" name="q10" id="q10a" data-correct /><label
+                  for="q10a"
+                  ><span class="tag">A</span
+                  ><span class="text">53124</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q10" id="q10b" /><label for="q10b"
+                  ><span class="tag">B</span
+                  ><span class="text">51324</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q10" id="q10c" /><label for="q10c"
+                  ><span class="tag">C</span
+                  ><span class="text">53142</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q10" id="q10d" /><label for="q10d"
+                  ><span class="tag">D</span
+                  ><span class="text">35124</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 11 -->
+          <section class="q card">
+            <div class="head">Part 2: Artificial intelligence</div>
+            <div class="desc">Choose the correct order.</div>
+            <ol class="stmts">
+              <li>
+                High computational costs previously hindered the development of
+                AI.
+              </li>
+              <li>
+                Modern AI tools help businesses to analyze data and make better
+                decisions.
+              </li>
+              <li>
+                Nowadays, AI engineers build advanced models for complex tasks
+                such as language translation.
+              </li>
+              <li>
+                Over the past decade, artificial intelligence has revolutionized
+                various industries.
+              </li>
+              <li>
+                The early AI systems were limited to simple pattern recognition
+                tasks.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q11" id="q11a" /><label for="q11a"
+                  ><span class="tag">A</span
+                  ><span class="text">41532</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q11" id="q11b" /><label for="q11b"
+                  ><span class="tag">B</span
+                  ><span class="text">45132</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="C">
+                <input type="radio" name="q11" id="q11c" data-correct /><label
+                  for="q11c"
+                  ><span class="tag">C</span
+                  ><span class="text">51432</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q11" id="q11d" /><label for="q11d"
+                  ><span class="tag">D</span
+                  ><span class="text">54123</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 12 -->
+          <section class="q card">
+            <div class="head">Part 2: Means of transportation</div>
+            <div class="desc">Put the sentences in correct order.</div>
+            <ol class="stmts">
+              <li>These made traveling more accessible to everyone.</li>
+              <li>
+                Later, air travel became popular among business professionals.
+              </li>
+              <li>
+                Today, buses and trains are among the most common transportation
+                options.
+              </li>
+              <li>
+                In the past, transportation was primarily accessible to the
+                wealthy.
+              </li>
+              <li>
+                Eventually, buses and trains were introduced as affordable
+                alternatives.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q12" id="q12a" /><label for="q12a"
+                  ><span class="tag">A</span
+                  ><span class="text">24513</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q12" id="q12b" /><label for="q12b"
+                  ><span class="tag">B</span
+                  ><span class="text">45213</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q12" id="q12c" /><label for="q12c"
+                  ><span class="tag">C</span
+                  ><span class="text">42531</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="D">
+                <input type="radio" name="q12" id="q12d" data-correct /><label
+                  for="q12d"
+                  ><span class="tag">D</span
+                  ><span class="text">42513</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 13 -->
+          <section class="q card">
+            <div class="head">Part 2: Movie then and now</div>
+            <div class="desc">
+              Rearrange the sentences in the correct order.
+            </div>
+            <ol class="stmts">
+              <li>
+                Nowadays, everything has changed: actors and producers can earn
+                a lot of money.
+              </li>
+              <li>
+                Because of the lack of money, actors also earned little money
+                from acting.
+              </li>
+              <li>Movies today are very different from movies in the past.</li>
+              <li>
+                In the old days, films were only in black and white, and
+                sometimes even without sound.
+              </li>
+              <li>
+                Producers had very low budgets due to technological limits.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt correct" data-choice="A">
+                <input type="radio" name="q13" id="q13a" data-correct /><label
+                  for="q13a"
+                  ><span class="tag">A</span
+                  ><span class="text">34521</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q13" id="q13b" /><label for="q13b"
+                  ><span class="tag">B</span
+                  ><span class="text">35412</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q13" id="q13c" /><label for="q13c"
+                  ><span class="tag">C</span
+                  ><span class="text">43521</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q13" id="q13d" /><label for="q13d"
+                  ><span class="tag">D</span
+                  ><span class="text">34152</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 14 -->
+          <section class="q card">
+            <div class="head">Topic: Write about the place</div>
+            <div class="desc">Arrange the sentences in order.</div>
+            <ol class="stmts">
+              <li>You should also compare that place with your own country.</li>
+              <li>
+                Even if you cannot visit the place, your writing will still look
+                realistic.
+              </li>
+              <li>
+                Before writing about a place, you need to do some research on
+                it.
+              </li>
+              <li>
+                It is important to learn about the people and the history there
+                carefully.
+              </li>
+              <li>Such comparisons will make your writing more meaningful.</li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q14" id="q14a" /><label for="q14a"
+                  ><span class="tag">A</span
+                  ><span class="text">34215</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q14" id="q14b" /><label for="q14b"
+                  ><span class="tag">B</span
+                  ><span class="text">31425</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="C">
+                <input type="radio" name="q14" id="q14c" data-correct /><label
+                  for="q14c"
+                  ><span class="tag">C</span
+                  ><span class="text">34125</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q14" id="q14d" /><label for="q14d"
+                  ><span class="tag">D</span
+                  ><span class="text">32415</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 15 -->
+          <section class="q card">
+            <div class="head">Topic: Famous Singer (1)</div>
+            <div class="desc">Arrange in correct order.</div>
+            <ol class="stmts">
+              <li>
+                His way of dressing and performing was very different from most
+                people.
+              </li>
+              <li>He became well-known to many audiences.</li>
+              <li>Before becoming famous, he studied music at school at 15.</li>
+              <li>
+                This made him receive many invitations for collaborations and
+                jobs.
+              </li>
+              <li>He is a famous singer.</li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q15" id="q15a" /><label for="q15a"
+                  ><span class="tag">A</span
+                  ><span class="text">51432</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="B">
+                <input type="radio" name="q15" id="q15b" data-correct /><label
+                  for="q15b"
+                  ><span class="tag">B</span
+                  ><span class="text">53142</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q15" id="q15c" /><label for="q15c"
+                  ><span class="tag">C</span
+                  ><span class="text">53412</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q15" id="q15d" /><label for="q15d"
+                  ><span class="tag">D</span
+                  ><span class="text">51342</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 16 -->
+          <section class="q card">
+            <div class="head">Topic: Famous Singer (2)</div>
+            <div class="desc">Choose the correct order.</div>
+            <ol class="stmts">
+              <li>
+                He spent many years practicing and learning how to perform.
+              </li>
+              <li>He is a famous singer who is loved by many people.</li>
+              <li>
+                His clothing style and performance on stage were very unique.
+              </li>
+              <li>
+                Before becoming famous, he studied music at a school when he was
+                15.
+              </li>
+              <li>
+                Because of that, more and more people started to recognize him.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt correct" data-choice="A">
+                <input type="radio" name="q16" id="q16a" data-correct /><label
+                  for="q16a"
+                  ><span class="tag">A</span
+                  ><span class="text">24135</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q16" id="q16b" /><label for="q16b"
+                  ><span class="tag">B</span
+                  ><span class="text">21435</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q16" id="q16c" /><label for="q16c"
+                  ><span class="tag">C</span
+                  ><span class="text">24315</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q16" id="q16d" /><label for="q16d"
+                  ><span class="tag">D</span
+                  ><span class="text">23415</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 17 -->
+          <section class="q card">
+            <div class="head">Topic: Weekend activities</div>
+            <div class="desc">Arrange in order.</div>
+            <ol class="stmts">
+              <li>
+                Activities included football, swimming, and skipping rope.
+              </li>
+              <li>
+                There were 60 participants, with Ms. Kamus winning the race.
+              </li>
+              <li>
+                After she received the prize, it was time for children’s
+                activities.
+              </li>
+              <li>
+                After playing, the children were hungry and ate with their
+                parents.
+              </li>
+              <li>
+                It was held on Saturday morning, featuring a 10 km race for
+                adults.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q17" id="q17a" /><label for="q17a"
+                  ><span class="tag">A</span
+                  ><span class="text">52134</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="B">
+                <input type="radio" name="q17" id="q17b" data-correct /><label
+                  for="q17b"
+                  ><span class="tag">B</span
+                  ><span class="text">52314</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q17" id="q17c" /><label for="q17c"
+                  ><span class="tag">C</span
+                  ><span class="text">51234</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q17" id="q17d" /><label for="q17d"
+                  ><span class="tag">D</span
+                  ><span class="text">51324</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 18 -->
+          <section class="q card">
+            <div class="head">Topic: Films</div>
+            <div class="desc">Choose the correct order.</div>
+            <ol class="stmts">
+              <li>
+                Due to the lack of money, actors had few opportunities to earn
+                money.
+              </li>
+              <li>Old movies were very different from today's movies.</li>
+              <li>
+                Now things have changed, filmmakers can earn thousands of
+                dollars.
+              </li>
+              <li>
+                The movies were only in black and white and sometimes without
+                sound.
+              </li>
+              <li>
+                Not only were there technological limitations, but budgets were
+                also low.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q18" id="q18a" /><label for="q18a"
+                  ><span class="tag">A</span
+                  ><span class="text">24513</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="B">
+                <input type="radio" name="q18" id="q18b" data-correct /><label
+                  for="q18b"
+                  ><span class="tag">B</span
+                  ><span class="text">24513</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q18" id="q18c" /><label for="q18c"
+                  ><span class="tag">C</span
+                  ><span class="text">25413</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q18" id="q18d" /><label for="q18d"
+                  ><span class="tag">D</span
+                  ><span class="text">24153</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 19 -->
+          <section class="q card">
+            <div class="head">Topic: Family sport day</div>
+            <div class="desc">Arrange the sentences correctly.</div>
+            <ol class="stmts">
+              <li>
+                After finishing the games, the children were very hungry and ate
+                with their parents.
+              </li>
+              <li>
+                The activities included football, swimming, skipping, and more.
+              </li>
+              <li>
+                It took place on Saturday morning, there was a 10-meter race for
+                adults.
+              </li>
+              <li>Sixty people took part, and Ms. Kamus won the race.</li>
+              <li>
+                After she received her prize, the following time was dedicated
+                to children’s activities.
+              </li>
+            </ol>
+            <div class="options">
+              <div class="opt correct" data-choice="A">
+                <input type="radio" name="q19" id="q19a" data-correct /><label
+                  for="q19a"
+                  ><span class="tag">A</span
+                  ><span class="text">34521</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q19" id="q19b" /><label for="q19b"
+                  ><span class="tag">B</span
+                  ><span class="text">35421</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q19" id="q19c" /><label for="q19c"
+                  ><span class="tag">C</span
+                  ><span class="text">34251</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q19" id="q19d" /><label for="q19d"
+                  ><span class="tag">D</span
+                  ><span class="text">34152</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- PART 4 -->
+
+          <!-- 20 -->
+          <section class="q card">
+            <div class="head">Part 4: Wellness Trend</div>
+            <div class="desc">
+              Arrange the ideas in a logical order to describe current wellness
+              trends.
+            </div>
+            <ol class="stmts">
+              <li>Promoting mental health awareness</li>
+              <li>Focusing on sustainable lifestyle changes</li>
+              <li>Building supportive health communities</li>
+              <li>Concerns about wellness misinformation</li>
+              <li>Encouraging community fitness programs</li>
+              <li>Overemphasis on trendy diets</li>
+              <li>Redefining holistic health approaches</li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q20" id="q20a" /><label for="q20a"
+                  ><span class="tag">A</span
+                  ><span class="text">1745362</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q20" id="q20b" /><label for="q20b"
+                  ><span class="tag">B</span
+                  ><span class="text">7125364</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="C">
+                <input type="radio" name="q20" id="q20c" data-correct /><label
+                  for="q20c"
+                  ><span class="tag">C</span
+                  ><span class="text">7153264</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q20" id="q20d" /><label for="q20d"
+                  ><span class="tag">D</span
+                  ><span class="text">7135246</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 21 -->
+          <section class="q card">
+            <div class="head">Topic: Digital Transformation</div>
+            <div class="desc">
+              Choose the correct order showing the logical progression of
+              digital transformation.
+            </div>
+            <ol class="stmts">
+              <li>Promoting digital skills training</li>
+              <li>Over-reliance on automated systems</li>
+              <li>Redefining business models with technology</li>
+              <li>Enhancing productivity through automation</li>
+              <li>Concerns about cybersecurity risks</li>
+              <li>Focusing on ethical technology development</li>
+              <li>Building inclusive digital ecosystems</li>
+            </ol>
+            <div class="options">
+              <div class="opt correct" data-choice="A">
+                <input type="radio" name="q21" id="q21a" data-correct /><label
+                  for="q21a"
+                  ><span class="tag">A</span
+                  ><span class="text">3412576</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q21" id="q21b" /><label for="q21b"
+                  ><span class="tag">B</span
+                  ><span class="text">3142675</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q21" id="q21c" /><label for="q21c"
+                  ><span class="tag">C</span
+                  ><span class="text">3412657</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q21" id="q21d" /><label for="q21d"
+                  ><span class="tag">D</span
+                  ><span class="text">3124576</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 22 -->
+          <section class="q card">
+            <div class="head">Part 4: Urban Development</div>
+            <div class="desc">
+              Put the ideas below in a logical order describing sustainable
+              urban development.
+            </div>
+            <ol class="stmts">
+              <li>Concerns about traffic congestion</li>
+              <li>Focusing on renewable energy sources</li>
+              <li>Redefining sustainable city planning</li>
+              <li>Over-reliance on high-rise buildings</li>
+              <li>Encouraging green spaces in urban areas</li>
+              <li>Strengthening community engagement</li>
+              <li>Supporting affordable housing projects</li>
+            </ol>
+            <div class="options">
+              <div class="opt correct" data-choice="A">
+                <input type="radio" name="q22" id="q22a" data-correct /><label
+                  for="q22a"
+                  ><span class="tag">A</span
+                  ><span class="text">3547162</span></label
+                >
+              </div>
+              <div class="opt" data-choice="B">
+                <input type="radio" name="q22" id="q22b" /><label for="q22b"
+                  ><span class="tag">B</span
+                  ><span class="text">3751462</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q22" id="q22c" /><label for="q22c"
+                  ><span class="tag">C</span
+                  ><span class="text">3574162</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q22" id="q22d" /><label for="q22d"
+                  ><span class="tag">D</span
+                  ><span class="text">3475162</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 23 -->
+          <section class="q card">
+            <div class="head">
+              Part 4: The Arrival of the Four-Day Work Week
+            </div>
+            <div class="desc">
+              Arrange the statements to show the logical flow of this topic.
+            </div>
+            <ol class="stmts">
+              <li>Benefits for employees</li>
+              <li>A way of life now outdated</li>
+              <li>Difficult to change old habits</li>
+              <li>Unfair for some people</li>
+              <li>Alternative solutions worth considering</li>
+              <li>Undesirable financial consequences</li>
+              <li>Unforeseen challenges for employees</li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q23" id="q23a" /><label for="q23a"
+                  ><span class="tag">A</span
+                  ><span class="text">2137645</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="B">
+                <input type="radio" name="q23" id="q23b" data-correct /><label
+                  for="q23b"
+                  ><span class="tag">B</span
+                  ><span class="text">2137645</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q23" id="q23c" /><label for="q23c"
+                  ><span class="tag">C</span
+                  ><span class="text">2317645</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q23" id="q23d" /><label for="q23d"
+                  ><span class="tag">D</span
+                  ><span class="text">2173645</span></label
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- 24 -->
+          <section class="q card">
+            <div class="head">Part 4: Mountain</div>
+            <div class="desc">Rearrange the sentences in logical order.</div>
+            <ol class="stmts">
+              <li>The unique feeling of achievement</li>
+              <li>Focusing on stability</li>
+              <li>A close relationship</li>
+              <li>Public recognition of accomplishments</li>
+              <li>The mistake of misplaced priorities</li>
+              <li>Redefining the concept of a mountain</li>
+              <li>A concerning connection</li>
+            </ol>
+            <div class="options">
+              <div class="opt" data-choice="A">
+                <input type="radio" name="q24" id="q24a" /><label for="q24a"
+                  ><span class="tag">A</span
+                  ><span class="text">6154732</span></label
+                >
+              </div>
+              <div class="opt correct" data-choice="B">
+                <input type="radio" name="q24" id="q24b" data-correct /><label
+                  for="q24b"
+                  ><span class="tag">B</span
+                  ><span class="text">6154732</span></label
+                >
+              </div>
+              <div class="opt" data-choice="C">
+                <input type="radio" name="q24" id="q24c" /><label for="q24c"
+                  ><span class="tag">C</span
+                  ><span class="text">6547132</span></label
+                >
+              </div>
+              <div class="opt" data-choice="D">
+                <input type="radio" name="q24" id="q24d" /><label for="q24d"
+                  ><span class="tag">D</span
+                  ><span class="text">6157432</span></label
+                >
+              </div>
+            </div>
+          </section>
+        </div>
+      </form>
+    </div>
+
+    <script>
+      // Fisher–Yates shuffle
+      function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+      // Gán lại nhãn A/B/C/D + id/for
+      function relabelOptions(opts) {
+        const letters = ["A", "B", "C", "D"];
+        opts.forEach((opt, idx) => {
+          const input = opt.querySelector('input[type="radio"]');
+          const label = opt.querySelector("label");
+          const tag = label.querySelector(".tag");
+          const qname = input.name;
+          opt.dataset.choice = letters[idx];
+          const newId = `${qname}-${letters[idx]}`;
+          input.id = newId;
+          label.setAttribute("for", newId);
+          if (tag) tag.textContent = letters[idx];
+        });
+      }
+      function randomizeQuestion(qEl) {
+        const parent = qEl.querySelector(".options");
+        if (!parent) return;
+        const opts = Array.from(parent.querySelectorAll(".opt"));
+        shuffle(opts).forEach((opt) => parent.appendChild(opt));
+        relabelOptions(Array.from(parent.children));
+      }
+      function randomizeAll() {
+        const form = document.getElementById("quizForm");
+        if (form) form.reset();
+        document.querySelectorAll(".quiz .q").forEach(randomizeQuestion);
+      }
+      document
+        .getElementById("btn-random")
+        ?.addEventListener("click", randomizeAll);
+      document
+        .getElementById("btn-reset")
+        ?.addEventListener("click", () =>
+          document.getElementById("quizForm")?.reset()
+        );
+
+      // Muốn random ngay khi mở trang thì bật:
+      // randomizeAll();
+      // --- ĐẾM ĐÚNG/SAI BẰNG JS ---
+      function updateCounters() {
+        let correct = 0,
+          wrong = 0;
+        document.querySelectorAll(".quiz .q").forEach((q) => {
+          const chosen = q.querySelector('input[type="radio"]:checked');
+          if (!chosen) return;
+          if (chosen.hasAttribute("data-correct")) correct++;
+          else wrong++;
+        });
+        // Gán thẳng text vào header
+        document
+          .querySelectorAll(".oknum")
+          .forEach((el) => (el.textContent = correct));
+        document
+          .querySelectorAll(".badnum")
+          .forEach((el) => (el.textContent = wrong));
+      }
+
+      // Lắng nghe thay đổi trong form
+      const formEl = document.querySelector("form");
+      if (formEl) {
+        formEl.addEventListener("change", updateCounters);
+        formEl.addEventListener("reset", () => setTimeout(updateCounters, 0)); // chờ reset xong
+      }
+
+      // Gọi 1 lần khi tải trang
+      updateCounters();
+
+      // --- GHIM LẠI: gọi updateCounters sau khi random ---
+      const oldRandomizeAll = randomizeAll; // giữ hàm bạn đã có
+      window.randomizeAll = function () {
+        oldRandomizeAll();
+        // Chờ DOM reflow rồi cập nhật số
+        requestAnimationFrame(updateCounters);
+      };
+    </script>
+  </body>
+</html>
